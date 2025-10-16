@@ -173,7 +173,12 @@ export default function MenuBuilder() {
           </CardHeader>
           <CardContent className="space-y-2">
             {!categories || categories.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">No categories yet</p>
+              <div className="text-center py-8 px-4">
+                <p className="text-sm text-muted-foreground mb-2">No categories yet</p>
+                <p className="text-xs text-muted-foreground">
+                  Click the <Plus className="w-3 h-3 inline mx-1" /> button above to create your first category
+                </p>
+              </div>
             ) : (
               categories.map((category) => (
                 <button
@@ -297,13 +302,20 @@ export default function MenuBuilder() {
           </CardHeader>
           <CardContent>
             {!selectedCategory ? (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                Select a category to view and manage items
-              </p>
+              <div className="text-center py-12 px-4">
+                <p className="text-sm text-muted-foreground mb-2">
+                  {!categories || categories.length === 0 
+                    ? "Create a category first, then add menu items to it"
+                    : "Select a category from the left to view and manage items"}
+                </p>
+              </div>
             ) : !menuItems || menuItems.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                No items in this category yet
-              </p>
+              <div className="text-center py-12 px-4">
+                <p className="text-sm text-muted-foreground mb-2">No items in this category yet</p>
+                <p className="text-xs text-muted-foreground">
+                  Click "Add Item" above to create your first menu item
+                </p>
+              </div>
             ) : (
               <div className="grid grid-cols-1 gap-4">
                 {menuItems.map((item) => (

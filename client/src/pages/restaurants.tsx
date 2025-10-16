@@ -46,7 +46,7 @@ export default function Restaurants() {
       });
       toast({
         title: "Restaurant created",
-        description: "Your restaurant has been created successfully.",
+        description: "Click 'Menu Builder' to start adding categories and menu items.",
       });
     },
   });
