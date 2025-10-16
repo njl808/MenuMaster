@@ -22,6 +22,31 @@ export const restaurants = pgTable("restaurants", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Customer accounts for end-users
+export const customers = pgTable("customers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull().unique(),
+  password: text("password").notNull(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  phone: text("phone"),
+  defaultAddress: jsonb("default_address").$type<{
+    street: string;
+    city: string;
+    state: string;
+    zipCode: string;
+  }>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Customer favorites
+export const customerFavorites = pgTable("customer_favorites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  customerId: varchar("customer_id").notNull().references(() => customers.id, { onDelete: "cascade" }),
+  menuItemId: varchar("menu_item_id").notNull().references(() => menuItems.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Menu categories
 export const categories = pgTable("categories", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -96,6 +121,7 @@ export const orders = pgTable("orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   restaurantId: varchar("restaurant_id").notNull().references(() => restaurants.id, { onDelete: "cascade" }),
   locationId: varchar("location_id").references(() => locations.id, { onDelete: "set null" }),
+  customerId: varchar("customer_id").references(() => customers.id, { onDelete: "set null" }), // Null for guest orders
   customerName: text("customer_name").notNull(),
   customerEmail: text("customer_email").notNull(),
   customerPhone: text("customer_phone"),
@@ -125,6 +151,8 @@ export const insertMenuItemSchema = createInsertSchema(menuItems).omit({ id: tru
 export const insertModifierSchema = createInsertSchema(modifiers).omit({ id: true });
 export const insertLocationSchema = createInsertSchema(locations).omit({ id: true, createdAt: true });
 export const insertLocationMenuOverrideSchema = createInsertSchema(locationMenuOverrides).omit({ id: true });
+export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true, createdAt: true });
+export const insertCustomerFavoriteSchema = createInsertSchema(customerFavorites).omit({ id: true, createdAt: true });
 export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true, updatedAt: true });
 
 // TypeScript types
@@ -140,5 +168,9 @@ export type Location = typeof locations.$inferSelect;
 export type InsertLocation = z.infer<typeof insertLocationSchema>;
 export type LocationMenuOverride = typeof locationMenuOverrides.$inferSelect;
 export type InsertLocationMenuOverride = z.infer<typeof insertLocationMenuOverrideSchema>;
+export type Customer = typeof customers.$inferSelect;
+export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
+export type CustomerFavorite = typeof customerFavorites.$inferSelect;
+export type InsertCustomerFavorite = z.infer<typeof insertCustomerFavoriteSchema>;
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
