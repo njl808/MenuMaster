@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
-import { insertRestaurantSchema, insertCategorySchema, insertMenuItemSchema, insertModifierSchema, insertOrderSchema } from "@shared/schema";
+import { insertRestaurantSchema, insertCategorySchema, insertMenuItemSchema, insertModifierSchema, insertLocationSchema, insertLocationMenuOverrideSchema, insertOrderSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Helper function to sanitize restaurant data (remove secret keys)
@@ -174,6 +174,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/modifiers/:id", async (req, res) => {
     try {
       await storage.deleteModifier(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Location routes
+  app.get("/api/locations/:restaurantId", async (req, res) => {
+    try {
+      const locations = await storage.getLocationsByRestaurant(req.params.restaurantId);
+      res.json(locations);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/locations", async (req, res) => {
+    try {
+      const data = insertLocationSchema.parse(req.body);
+      const location = await storage.createLocation(data);
+      res.json(location);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/locations/:id", async (req, res) => {
+    try {
+      const location = await storage.updateLocation(req.params.id, req.body);
+      if (!location) {
+        return res.status(404).json({ error: "Location not found" });
+      }
+      res.json(location);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/locations/:id", async (req, res) => {
+    try {
+      await storage.deleteLocation(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Location override routes
+  app.get("/api/location-overrides/:locationId", async (req, res) => {
+    try {
+      const overrides = await storage.getLocationOverrides(req.params.locationId);
+      res.json(overrides);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/location-overrides", async (req, res) => {
+    try {
+      const data = insertLocationMenuOverrideSchema.parse(req.body);
+      const override = await storage.createLocationOverride(data);
+      res.json(override);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/location-overrides/:id", async (req, res) => {
+    try {
+      await storage.deleteLocationOverride(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });

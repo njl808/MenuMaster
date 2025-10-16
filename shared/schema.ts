@@ -54,10 +54,36 @@ export const modifiers = pgTable("modifiers", {
   isRequired: boolean("is_required").notNull().default(false),
 });
 
+// Locations (for multi-location restaurant chains)
+export const locations = pgTable("locations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  restaurantId: varchar("restaurant_id").notNull().references(() => restaurants.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  address: text("address").notNull(),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  zipCode: text("zip_code").notNull(),
+  phone: text("phone"),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Location-specific menu overrides
+export const locationMenuOverrides = pgTable("location_menu_overrides", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: "cascade" }),
+  menuItemId: varchar("menu_item_id").notNull().references(() => menuItems.id, { onDelete: "cascade" }),
+  isAvailable: boolean("is_available").notNull().default(true),
+  price: decimal("price", { precision: 10, scale: 2 }), // Override price for this location (null = use default)
+});
+
 // Orders
 export const orders = pgTable("orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   restaurantId: varchar("restaurant_id").notNull().references(() => restaurants.id, { onDelete: "cascade" }),
+  locationId: varchar("location_id").references(() => locations.id, { onDelete: "set null" }),
   customerName: text("customer_name").notNull(),
   customerEmail: text("customer_email").notNull(),
   customerPhone: text("customer_phone"),
@@ -85,6 +111,8 @@ export const insertRestaurantSchema = createInsertSchema(restaurants).omit({ id:
 export const insertCategorySchema = createInsertSchema(categories).omit({ id: true });
 export const insertMenuItemSchema = createInsertSchema(menuItems).omit({ id: true });
 export const insertModifierSchema = createInsertSchema(modifiers).omit({ id: true });
+export const insertLocationSchema = createInsertSchema(locations).omit({ id: true, createdAt: true });
+export const insertLocationMenuOverrideSchema = createInsertSchema(locationMenuOverrides).omit({ id: true });
 export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true, updatedAt: true });
 
 // TypeScript types
@@ -96,5 +124,9 @@ export type MenuItem = typeof menuItems.$inferSelect;
 export type InsertMenuItem = z.infer<typeof insertMenuItemSchema>;
 export type Modifier = typeof modifiers.$inferSelect;
 export type InsertModifier = z.infer<typeof insertModifierSchema>;
+export type Location = typeof locations.$inferSelect;
+export type InsertLocation = z.infer<typeof insertLocationSchema>;
+export type LocationMenuOverride = typeof locationMenuOverrides.$inferSelect;
+export type InsertLocationMenuOverride = z.infer<typeof insertLocationMenuOverrideSchema>;
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;

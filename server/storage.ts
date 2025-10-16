@@ -7,11 +7,15 @@ import {
   type InsertMenuItem,
   type Modifier,
   type InsertModifier,
+  type Location,
+  type InsertLocation,
+  type LocationMenuOverride,
+  type InsertLocationMenuOverride,
   type Order,
   type InsertOrder,
 } from "@shared/schema";
 import { db } from "./db";
-import { restaurants, categories, menuItems, modifiers, orders } from "@shared/schema";
+import { restaurants, categories, menuItems, modifiers, locations, locationMenuOverrides, orders } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 export interface IStorage {
@@ -40,6 +44,18 @@ export interface IStorage {
   getModifiersByMenuItem(menuItemId: string): Promise<Modifier[]>;
   createModifier(modifier: InsertModifier): Promise<Modifier>;
   deleteModifier(id: string): Promise<void>;
+  
+  // Locations
+  getLocation(id: string): Promise<Location | undefined>;
+  getLocationsByRestaurant(restaurantId: string): Promise<Location[]>;
+  createLocation(location: InsertLocation): Promise<Location>;
+  updateLocation(id: string, data: Partial<InsertLocation>): Promise<Location | undefined>;
+  deleteLocation(id: string): Promise<void>;
+  
+  // Location Menu Overrides
+  getLocationOverrides(locationId: string): Promise<LocationMenuOverride[]>;
+  createLocationOverride(override: InsertLocationMenuOverride): Promise<LocationMenuOverride>;
+  deleteLocationOverride(id: string): Promise<void>;
   
   // Orders
   getOrder(id: string): Promise<Order | undefined>;
@@ -142,6 +158,44 @@ export class DatabaseStorage implements IStorage {
 
   async deleteModifier(id: string): Promise<void> {
     await db.delete(modifiers).where(eq(modifiers.id, id));
+  }
+
+  // Locations
+  async getLocation(id: string): Promise<Location | undefined> {
+    const result = await db.select().from(locations).where(eq(locations.id, id));
+    return result[0];
+  }
+
+  async getLocationsByRestaurant(restaurantId: string): Promise<Location[]> {
+    return await db.select().from(locations).where(eq(locations.restaurantId, restaurantId));
+  }
+
+  async createLocation(location: InsertLocation): Promise<Location> {
+    const result = await db.insert(locations).values(location).returning();
+    return result[0];
+  }
+
+  async updateLocation(id: string, data: Partial<InsertLocation>): Promise<Location | undefined> {
+    const result = await db.update(locations).set(data).where(eq(locations.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteLocation(id: string): Promise<void> {
+    await db.delete(locations).where(eq(locations.id, id));
+  }
+
+  // Location Menu Overrides
+  async getLocationOverrides(locationId: string): Promise<LocationMenuOverride[]> {
+    return await db.select().from(locationMenuOverrides).where(eq(locationMenuOverrides.locationId, locationId));
+  }
+
+  async createLocationOverride(override: InsertLocationMenuOverride): Promise<LocationMenuOverride> {
+    const result = await db.insert(locationMenuOverrides).values(override).returning();
+    return result[0];
+  }
+
+  async deleteLocationOverride(id: string): Promise<void> {
+    await db.delete(locationMenuOverrides).where(eq(locationMenuOverrides.id, id));
   }
 
   // Orders
