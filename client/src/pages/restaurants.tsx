@@ -291,6 +291,15 @@ export default function Restaurants() {
             <Card key={restaurant.id} className="hover-elevate">
               <CardContent className="p-6">
                 <div className="flex items-center gap-6">
+                  {restaurant.logoUrl && (
+                    <div className="flex-shrink-0">
+                      <img
+                        src={restaurant.logoUrl}
+                        alt={`${restaurant.name} logo`}
+                        className="w-16 h-16 rounded-lg object-cover"
+                      />
+                    </div>
+                  )}
                   <div className="flex-1">
                     <div className="flex items-start justify-between mb-2">
                       <div>
