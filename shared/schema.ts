@@ -30,6 +30,12 @@ export const categories = pgTable("categories", {
   description: text("description"),
   displayOrder: integer("display_order").notNull().default(0),
   isActive: boolean("is_active").notNull().default(true),
+  // Scheduling fields
+  availableDays: text("available_days").array().$type<string[]>().default([]), // ["monday", "tuesday", ...]
+  availableFrom: text("available_from"), // "08:00" time format
+  availableTo: text("available_to"), // "22:00" time format
+  seasonalStart: text("seasonal_start"), // "2024-12-01" date format
+  seasonalEnd: text("seasonal_end"), // "2024-12-31" date format
 });
 
 // Menu items
@@ -43,6 +49,12 @@ export const menuItems = pgTable("menu_items", {
   dietaryTags: text("dietary_tags").array().$type<string[]>().default([]), // vegetarian, vegan, gluten-free, etc.
   isAvailable: boolean("is_available").notNull().default(true),
   displayOrder: integer("display_order").notNull().default(0),
+  // Scheduling fields
+  availableDays: text("available_days").array().$type<string[]>().default([]), // ["monday", "tuesday", ...]
+  availableFrom: text("available_from"), // "08:00" time format
+  availableTo: text("available_to"), // "22:00" time format
+  seasonalStart: text("seasonal_start"), // "2024-12-01" date format
+  seasonalEnd: text("seasonal_end"), // "2024-12-31" date format
 });
 
 // Item modifiers (e.g., "Extra Cheese", "No Onions")
