@@ -31,6 +31,7 @@ export default function MenuBuilder() {
   const [groupDialog, setGroupDialog] = useState(false);
   const [modifierFormDialog, setModifierFormDialog] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   
   const [categoryForm, setCategoryForm] = useState<InsertCategory>({
     restaurantId: restaurantId || "",
@@ -111,6 +112,7 @@ export default function MenuBuilder() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/menu-items"] });
       setItemDialog(false);
+      setEditingItem(null);
       setItemForm({
         categoryId: "",
         name: "",
@@ -122,6 +124,29 @@ export default function MenuBuilder() {
         displayOrder: 0,
       });
       toast({ title: "Menu item created successfully" });
+    },
+  });
+
+  const updateItemMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertMenuItem> }) => {
+      const res = await apiRequest("PATCH", `/api/menu-items/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menu-items"] });
+      setItemDialog(false);
+      setEditingItem(null);
+      setItemForm({
+        categoryId: "",
+        name: "",
+        description: "",
+        price: "0.00",
+        imageUrl: "",
+        dietaryTags: [],
+        isAvailable: true,
+        displayOrder: 0,
+      });
+      toast({ title: "Menu item updated successfully" });
     },
   });
 
@@ -347,9 +372,24 @@ export default function MenuBuilder() {
               {selectedCategory ? "Menu Items" : "Select a category"}
             </CardTitle>
             {selectedCategory && (
-              <Dialog open={itemDialog} onOpenChange={setItemDialog}>
+              <Dialog open={itemDialog} onOpenChange={(open) => {
+                setItemDialog(open);
+                if (!open) {
+                  setEditingItem(null);
+                  setItemForm({
+                    categoryId: "",
+                    name: "",
+                    description: "",
+                    price: "0.00",
+                    imageUrl: "",
+                    dietaryTags: [],
+                    isAvailable: true,
+                    displayOrder: 0,
+                  });
+                }
+              }}>
                 <DialogTrigger asChild>
-                  <Button size="sm" data-testid="button-add-item">
+                  <Button size="sm" onClick={() => setEditingItem(null)} data-testid="button-add-item">
                     <Plus className="w-4 h-4 mr-2" />
                     Add Item
                   </Button>
@@ -357,11 +397,17 @@ export default function MenuBuilder() {
                 <DialogContent className="max-w-2xl">
                   <form onSubmit={(e) => { 
                     e.preventDefault(); 
-                    createItemMutation.mutate({ ...itemForm, categoryId: selectedCategory }); 
+                    if (editingItem) {
+                      updateItemMutation.mutate({ id: editingItem.id, data: itemForm });
+                    } else {
+                      createItemMutation.mutate({ ...itemForm, categoryId: selectedCategory }); 
+                    }
                   }}>
                     <DialogHeader>
-                      <DialogTitle>Add Menu Item</DialogTitle>
-                      <DialogDescription>Create a new item in this category</DialogDescription>
+                      <DialogTitle>{editingItem ? "Edit Menu Item" : "Add Menu Item"}</DialogTitle>
+                      <DialogDescription>
+                        {editingItem ? "Update the details for this menu item" : "Create a new item in this category"}
+                      </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div className="grid grid-cols-2 gap-4">
@@ -432,8 +478,12 @@ export default function MenuBuilder() {
                       </div>
                     </div>
                     <DialogFooter>
-                      <Button type="submit" disabled={createItemMutation.isPending} data-testid="button-submit-item">
-                        Create Item
+                      <Button 
+                        type="submit" 
+                        disabled={createItemMutation.isPending || updateItemMutation.isPending} 
+                        data-testid="button-submit-item"
+                      >
+                        {editingItem ? "Update Item" : "Create Item"}
                       </Button>
                     </DialogFooter>
                   </form>
@@ -485,6 +535,28 @@ export default function MenuBuilder() {
                             </div>
                             <div className="text-right flex flex-col gap-2 items-end">
                               <p className="text-lg font-bold text-primary">${item.price}</p>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => {
+                                  setEditingItem(item);
+                                  setItemForm({
+                                    categoryId: item.categoryId,
+                                    name: item.name,
+                                    description: item.description || "",
+                                    price: item.price,
+                                    imageUrl: item.imageUrl || "",
+                                    dietaryTags: item.dietaryTags || [],
+                                    isAvailable: item.isAvailable,
+                                    displayOrder: item.displayOrder,
+                                  });
+                                  setItemDialog(true);
+                                }}
+                                data-testid={`button-edit-item-${item.id}`}
+                              >
+                                <Pencil className="w-3 h-3 mr-1" />
+                                Edit
+                              </Button>
                               <Button 
                                 variant="outline" 
                                 size="sm" 
