@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Settings, Eye, Code, Palette } from "lucide-react";
+import { Plus, Settings, Eye, Code, Palette, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -16,6 +16,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 export default function Restaurants() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
   const [formData, setFormData] = useState<InsertRestaurant>({
     name: "",
     description: "",
@@ -54,9 +55,69 @@ export default function Restaurants() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: InsertRestaurant }) => {
+      // Build clean update payload - only include fields with values
+      const updateData: Record<string, any> = {
+        name: data.name,
+        description: data.description,
+        logoUrl: data.logoUrl,
+        bannerUrl: data.bannerUrl,
+        themeConfig: data.themeConfig,
+      };
+      
+      // Only include Stripe keys if they have values
+      if (data.stripePublishableKey) {
+        updateData.stripePublishableKey = data.stripePublishableKey;
+      }
+      if (data.stripeSecretKey) {
+        updateData.stripeSecretKey = data.stripeSecretKey;
+      }
+      
+      const res = await apiRequest("PATCH", `/api/restaurants/${id}`, updateData);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/restaurants"] });
+      setEditingRestaurant(null);
+      setIsDialogOpen(false);
+      setFormData({
+        name: "",
+        description: "",
+        logoUrl: "",
+        bannerUrl: "",
+        stripePublishableKey: "",
+        stripeSecretKey: "",
+        themeConfig: { primaryColor: "#16a34a", accentColor: "#f97316" },
+      });
+      toast({
+        title: "Restaurant updated",
+        description: "Your changes have been saved.",
+      });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createMutation.mutate(formData);
+    if (editingRestaurant) {
+      updateMutation.mutate({ id: editingRestaurant.id, data: formData });
+    } else {
+      createMutation.mutate(formData);
+    }
+  };
+
+  const handleEdit = (restaurant: Restaurant) => {
+    setEditingRestaurant(restaurant);
+    setFormData({
+      name: restaurant.name,
+      description: restaurant.description || "",
+      logoUrl: restaurant.logoUrl || "",
+      bannerUrl: restaurant.bannerUrl || "",
+      stripePublishableKey: restaurant.stripePublishableKey || "",
+      stripeSecretKey: "", // Don't show existing secret
+      themeConfig: restaurant.themeConfig || { primaryColor: "#16a34a", accentColor: "#f97316" },
+    });
+    setIsDialogOpen(true);
   };
 
   if (isLoading) {
@@ -74,9 +135,39 @@ export default function Restaurants() {
           <h1 className="text-3xl font-bold" data-testid="text-page-title">Restaurants</h1>
           <p className="text-muted-foreground mt-1">Manage your restaurant menus and settings</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) {
+            // Reset form and editing state when dialog closes
+            setEditingRestaurant(null);
+            setFormData({
+              name: "",
+              description: "",
+              logoUrl: "",
+              bannerUrl: "",
+              stripePublishableKey: "",
+              stripeSecretKey: "",
+              themeConfig: { primaryColor: "#16a34a", accentColor: "#f97316" },
+            });
+          }
+        }}>
           <DialogTrigger asChild>
-            <Button data-testid="button-create-restaurant">
+            <Button 
+              onClick={() => {
+                // Reset editing state when creating new restaurant
+                setEditingRestaurant(null);
+                setFormData({
+                  name: "",
+                  description: "",
+                  logoUrl: "",
+                  bannerUrl: "",
+                  stripePublishableKey: "",
+                  stripeSecretKey: "",
+                  themeConfig: { primaryColor: "#16a34a", accentColor: "#f97316" },
+                });
+              }}
+              data-testid="button-create-restaurant"
+            >
               <Plus className="w-4 h-4 mr-2" />
               Create Restaurant
             </Button>
@@ -84,9 +175,9 @@ export default function Restaurants() {
           <DialogContent className="max-w-2xl">
             <form onSubmit={handleSubmit}>
               <DialogHeader>
-                <DialogTitle>Create New Restaurant</DialogTitle>
+                <DialogTitle>{editingRestaurant ? "Edit Restaurant" : "Create New Restaurant"}</DialogTitle>
                 <DialogDescription>
-                  Add a new restaurant to start building menus. Stripe keys are optional - menus will work in demo mode without them.
+                  {editingRestaurant ? "Update your restaurant details and settings." : "Add a new restaurant to start building menus. Stripe keys are optional - menus will work in demo mode without them."}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -151,11 +242,14 @@ export default function Restaurants() {
                     value={formData.stripeSecretKey || ""}
                     onChange={(e) => setFormData({ ...formData, stripeSecretKey: e.target.value })}
                   />
+                  {editingRestaurant && (
+                    <p className="text-sm text-muted-foreground">Leave empty to keep existing key</p>
+                  )}
                 </div>
               </div>
               <DialogFooter>
-                <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit-restaurant">
-                  {createMutation.isPending ? "Creating..." : "Create Restaurant"}
+                <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending} data-testid="button-submit-restaurant">
+                  {createMutation.isPending || updateMutation.isPending ? "Saving..." : editingRestaurant ? "Update Restaurant" : "Create Restaurant"}
                 </Button>
               </DialogFooter>
             </form>
@@ -194,6 +288,10 @@ export default function Restaurants() {
                 </div>
               </CardContent>
               <CardFooter className="flex gap-2 flex-wrap">
+                <Button variant="outline" size="sm" onClick={() => handleEdit(restaurant)} data-testid={`button-edit-${restaurant.id}`}>
+                  <Pencil className="w-3 h-3 mr-1" />
+                  Edit
+                </Button>
                 <Button variant="default" size="sm" asChild data-testid={`button-menu-builder-${restaurant.id}`}>
                   <Link href={`/menu-builder?restaurantId=${restaurant.id}`}>
                     <Settings className="w-3 h-3 mr-1" />

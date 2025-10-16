@@ -64,9 +64,8 @@ export default function CustomerMenu() {
   const [, navigate] = useWouterLocation();
   const { toast } = useToast();
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const categoryRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   const { data: restaurant } = useQuery<Restaurant>({
     queryKey: ["/api/restaurants", restaurantId],
@@ -109,14 +108,10 @@ export default function CustomerMenu() {
   const cartTotal = cart.reduce((sum, c) => sum + parseFloat(c.item.price) * c.quantity, 0);
   const cartCount = cart.reduce((sum, c) => sum + c.quantity, 0);
 
-  // Group items by category
-  const itemsByCategory = categories?.reduce((acc, category) => {
-    const categoryItems = allItems?.filter(item => item.categoryId === category.id) || [];
-    if (categoryItems.length > 0) {
-      acc[category.id] = categoryItems;
-    }
-    return acc;
-  }, {} as Record<string, MenuItem[]>) || {};
+  // Filter items by selected category (or show all)
+  const filteredItems = selectedCategory
+    ? allItems?.filter((item) => item.categoryId === selectedCategory)
+    : allItems;
 
   const handleCheckout = () => {
     if (cart.length === 0) return;
@@ -124,21 +119,6 @@ export default function CustomerMenu() {
     // Store cart in sessionStorage for checkout page
     sessionStorage.setItem("checkout-cart", JSON.stringify({ restaurantId, cart }));
     navigate(`/checkout/${restaurantId}`);
-  };
-
-  const scrollToCategory = (categoryId: string) => {
-    const element = categoryRefs.current[categoryId];
-    if (element) {
-      const headerOffset = 140; // Account for sticky header + tabs
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
-      setActiveCategory(categoryId);
-    }
   };
 
   // Apply restaurant theme
@@ -161,31 +141,6 @@ export default function CustomerMenu() {
       document.documentElement.style.removeProperty('--accent');
     };
   }, [restaurant]);
-
-  // Scroll-based active category detection
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!categories || categories.length === 0) return;
-
-      const scrollPosition = window.scrollY + 200; // Offset for header
-
-      for (const category of categories) {
-        const element = categoryRefs.current[category.id];
-        if (element) {
-          const { offsetTop, offsetHeight } = element;
-          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
-            setActiveCategory(category.id);
-            break;
-          }
-        }
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    handleScroll(); // Set initial active category
-
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [categories]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -319,12 +274,21 @@ export default function CustomerMenu() {
         <div className="sticky top-[73px] z-10 bg-background/95 backdrop-blur border-b">
           <div className="max-w-7xl mx-auto px-4">
             <div className="flex gap-2 overflow-x-auto py-3 scrollbar-hide">
+              <Button
+                variant={selectedCategory === null ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategory(null)}
+                className="whitespace-nowrap flex-shrink-0"
+                data-testid="button-category-all"
+              >
+                All
+              </Button>
               {categories.map((category) => (
                 <Button
                   key={category.id}
-                  variant={activeCategory === category.id ? "default" : "outline"}
+                  variant={selectedCategory === category.id ? "default" : "outline"}
                   size="sm"
-                  onClick={() => scrollToCategory(category.id)}
+                  onClick={() => setSelectedCategory(category.id)}
                   className="whitespace-nowrap flex-shrink-0"
                   data-testid={`button-category-${category.id}`}
                 >
@@ -336,86 +300,68 @@ export default function CustomerMenu() {
         </div>
       )}
 
-      {/* Menu Items - Organized by Category */}
+      {/* Menu Items Grid */}
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {!allItems || allItems.length === 0 ? (
+        {!filteredItems || filteredItems.length === 0 ? (
           <p className="text-center text-muted-foreground py-16">No items available</p>
         ) : (
-          <div className="space-y-8">
-            {categories?.map((category) => {
-              const categoryItems = itemsByCategory[category.id];
-              if (!categoryItems || categoryItems.length === 0) return null;
-
-              return (
-                <div 
-                  key={category.id}
-                  ref={(el) => (categoryRefs.current[category.id] = el)}
-                  className="scroll-mt-36"
-                >
-                  <h2 className="text-2xl font-bold mb-4" data-testid={`text-category-${category.id}`}>
-                    {category.name}
-                  </h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {categoryItems.map((item, idx) => (
-                      <Card 
-                        key={item.id} 
-                        className="overflow-hidden hover-elevate flex flex-col sm:flex-row lg:flex-col"
-                        data-testid={`card-menu-item-${item.id}`}
-                      >
-                        <div className="relative overflow-hidden bg-muted sm:w-32 lg:w-full aspect-video sm:aspect-square lg:aspect-video flex-shrink-0">
-                          <img
-                            src={item.imageUrl || placeholderImages[idx % placeholderImages.length]}
-                            alt={item.name}
-                            className="w-full h-full object-cover"
-                          />
-                          {!item.isAvailable && (
-                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                              <Badge variant="secondary">Unavailable</Badge>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 flex flex-col p-4">
-                          <div className="flex-1">
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <h3 className="font-semibold text-base leading-tight" data-testid={`text-menu-item-name-${item.id}`}>
-                                {item.name}
-                              </h3>
-                              <span className="text-lg font-bold text-primary whitespace-nowrap">
-                                ${item.price}
-                              </span>
-                            </div>
-                            {item.description && (
-                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                                {item.description}
-                              </p>
-                            )}
-                            {item.dietaryTags && item.dietaryTags.length > 0 && (
-                              <div className="flex gap-1 flex-wrap mb-3">
-                                {item.dietaryTags.map((tag) => (
-                                  <Badge key={tag} variant="secondary" className="text-xs">
-                                    {tag}
-                                  </Badge>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                          <Button
-                            size="sm"
-                            className="w-full mt-2"
-                            onClick={() => addToCart(item)}
-                            disabled={!item.isAvailable}
-                            data-testid={`button-add-to-cart-${item.id}`}
-                          >
-                            <Plus className="w-4 h-4 mr-1" />
-                            Add to Cart
-                          </Button>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredItems.map((item, idx) => (
+              <Card 
+                key={item.id} 
+                className="overflow-hidden hover-elevate"
+                data-testid={`card-menu-item-${item.id}`}
+              >
+                <div className="relative overflow-hidden bg-muted aspect-[4/3]">
+                  <img
+                    src={item.imageUrl || placeholderImages[idx % placeholderImages.length]}
+                    alt={item.name}
+                    className="w-full h-full object-cover"
+                  />
+                  {!item.isAvailable && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <Badge variant="secondary">Unavailable</Badge>
+                    </div>
+                  )}
                 </div>
-              );
-            })}
+                <CardHeader className="p-4 pb-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="text-base font-semibold leading-tight" data-testid={`text-menu-item-name-${item.id}`}>
+                      {item.name}
+                    </CardTitle>
+                    <span className="text-lg font-bold text-primary whitespace-nowrap">
+                      ${item.price}
+                    </span>
+                  </div>
+                  {item.description && (
+                    <CardDescription className="text-sm mt-1 line-clamp-2">
+                      {item.description}
+                    </CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  {item.dietaryTags && item.dietaryTags.length > 0 && (
+                    <div className="flex gap-1 flex-wrap mb-3">
+                      {item.dietaryTags.map((tag) => (
+                        <Badge key={tag} variant="secondary" className="text-xs">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => addToCart(item)}
+                    disabled={!item.isAvailable}
+                    data-testid={`button-add-to-cart-${item.id}`}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add to Cart
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         )}
       </div>

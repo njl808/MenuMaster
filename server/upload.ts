@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import multer from "multer";
-import { writeFile } from "fs/promises";
-import { join } from "path";
+import { writeFile, mkdir } from "fs/promises";
+import { join, dirname } from "path";
 import { randomBytes } from "crypto";
 
 const upload = multer({
@@ -36,6 +36,9 @@ export function setupImageUpload(app: Express) {
       const ext = req.file.originalname.split('.').pop() || 'jpg';
       const filename = `${randomBytes(16).toString('hex')}.${ext}`;
       const filepath = join(publicDir, filename);
+
+      // Ensure directory exists
+      await mkdir(dirname(filepath), { recursive: true });
 
       // Write file to object storage
       await writeFile(filepath, req.file.buffer);
