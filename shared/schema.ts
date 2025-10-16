@@ -83,13 +83,26 @@ export const menuItems = pgTable("menu_items", {
   seasonalEnd: text("seasonal_end"), // "2024-12-31" date format
 });
 
+// Modifier groups (e.g., "Salad Items", "Sauces", "Pizza Toppings")
+export const modifierGroups = pgTable("modifier_groups", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  menuItemId: varchar("menu_item_id").notNull().references(() => menuItems.id, { onDelete: "cascade" }),
+  name: text("name").notNull(), // e.g., "Salad Items", "Sauces"
+  selectionType: text("selection_type").notNull().default("multiple"), // "single" or "multiple"
+  isRequired: boolean("is_required").notNull().default(false),
+  minSelections: integer("min_selections").default(0), // Minimum number of selections
+  maxSelections: integer("max_selections"), // Maximum number of selections (null = unlimited)
+  displayOrder: integer("display_order").notNull().default(0),
+});
+
 // Item modifiers (e.g., "Extra Cheese", "No Onions")
 export const modifiers = pgTable("modifiers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  menuItemId: varchar("menu_item_id").notNull().references(() => menuItems.id, { onDelete: "cascade" }),
+  modifierGroupId: varchar("modifier_group_id").notNull().references(() => modifierGroups.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   priceAdjustment: decimal("price_adjustment", { precision: 10, scale: 2 }).notNull().default("0"),
-  isRequired: boolean("is_required").notNull().default(false),
+  isAvailable: boolean("is_available").notNull().default(true),
+  displayOrder: integer("display_order").notNull().default(0),
 });
 
 // Locations (for multi-location restaurant chains)
@@ -149,6 +162,7 @@ export const orders = pgTable("orders", {
 export const insertRestaurantSchema = createInsertSchema(restaurants).omit({ id: true, createdAt: true });
 export const insertCategorySchema = createInsertSchema(categories).omit({ id: true });
 export const insertMenuItemSchema = createInsertSchema(menuItems).omit({ id: true });
+export const insertModifierGroupSchema = createInsertSchema(modifierGroups).omit({ id: true });
 export const insertModifierSchema = createInsertSchema(modifiers).omit({ id: true });
 export const insertLocationSchema = createInsertSchema(locations).omit({ id: true, createdAt: true });
 export const insertLocationMenuOverrideSchema = createInsertSchema(locationMenuOverrides).omit({ id: true });
@@ -163,6 +177,8 @@ export type Category = typeof categories.$inferSelect;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type MenuItem = typeof menuItems.$inferSelect;
 export type InsertMenuItem = z.infer<typeof insertMenuItemSchema>;
+export type ModifierGroup = typeof modifierGroups.$inferSelect;
+export type InsertModifierGroup = z.infer<typeof insertModifierGroupSchema>;
 export type Modifier = typeof modifiers.$inferSelect;
 export type InsertModifier = z.infer<typeof insertModifierSchema>;
 export type Location = typeof locations.$inferSelect;
