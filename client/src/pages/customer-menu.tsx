@@ -124,7 +124,7 @@ export default function CustomerMenu() {
   // Apply restaurant theme
   useEffect(() => {
     if (restaurant?.themeConfig) {
-      const { primaryColor, accentColor } = restaurant.themeConfig;
+      const { primaryColor, accentColor, mode } = restaurant.themeConfig;
       
       if (primaryColor) {
         const hsl = hexToHSL(primaryColor);
@@ -134,11 +134,19 @@ export default function CustomerMenu() {
         const hsl = hexToHSL(accentColor);
         document.documentElement.style.setProperty('--accent', hsl);
       }
+      
+      // Apply dark mode if configured
+      if (mode === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
     }
 
     return () => {
       document.documentElement.style.removeProperty('--primary');
       document.documentElement.style.removeProperty('--accent');
+      document.documentElement.classList.remove("dark");
     };
   }, [restaurant]);
 

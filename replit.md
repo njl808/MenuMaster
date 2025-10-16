@@ -29,9 +29,12 @@ A full-stack restaurant menu management and ordering system that enables restaur
 - Public URL generation for uploaded images
 
 **Theme Customization:**
-- Dynamic theme application to customer-facing menus
+- Enhanced color picker with preset color palettes for easy selection
+- Light/Dark mode toggle for customer-facing menus
+- Dynamic theme application across customer menu and checkout pages
 - Hex to HSL color conversion for CSS variable compatibility
-- Per-restaurant theme configuration (primary/accent colors)
+- Per-restaurant theme configuration (primary/accent colors, appearance mode)
+- Live preview showing theme in both light and dark modes
 
 ## User Preferences
 

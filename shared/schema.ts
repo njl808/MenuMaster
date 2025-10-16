@@ -16,9 +16,11 @@ export const restaurants = pgTable("restaurants", {
     primaryColor?: string;
     accentColor?: string;
     fontFamily?: string;
+    mode?: "light" | "dark";
   }>().default({
     primaryColor: "#16a34a",
-    accentColor: "#f97316"
+    accentColor: "#f97316",
+    mode: "light"
   }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
