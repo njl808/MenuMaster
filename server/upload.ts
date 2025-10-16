@@ -37,8 +37,8 @@ export function setupImageUpload(app: Express) {
       const filename = `${randomBytes(16).toString('hex')}.${ext}`;
       const filepath = join(publicDir, filename);
 
-      // Ensure directory exists
-      await mkdir(dirname(filepath), { recursive: true });
+      // Ensure directory exists (create the full public dir path)
+      await mkdir(publicDir, { recursive: true });
 
       // Write file to object storage
       await writeFile(filepath, req.file.buffer);
