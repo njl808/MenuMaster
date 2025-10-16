@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Settings, Eye, Code } from "lucide-react";
+import { Plus, Settings, Eye, Code, Palette } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -183,6 +183,12 @@ export default function Restaurants() {
                   <Link href={`/menu/${restaurant.id}`}>
                     <Eye className="w-3 h-3 mr-1" />
                     Preview
+                  </Link>
+                </Button>
+                <Button variant="outline" size="sm" asChild data-testid={`button-theme-${restaurant.id}`}>
+                  <Link href={`/theme?restaurantId=${restaurant.id}`}>
+                    <Palette className="w-3 h-3 mr-1" />
+                    Theme
                   </Link>
                 </Button>
                 <Button variant="outline" size="sm" asChild data-testid={`button-embed-${restaurant.id}`}>

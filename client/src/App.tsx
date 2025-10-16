@@ -11,6 +11,7 @@ import Restaurants from "@/pages/restaurants";
 import MenuBuilder from "@/pages/menu-builder";
 import Orders from "@/pages/orders";
 import Embed from "@/pages/embed";
+import Theme from "@/pages/theme";
 import CustomerMenu from "@/pages/customer-menu";
 import Checkout from "@/pages/checkout";
 import OrderSuccess from "@/pages/order-success";
@@ -22,6 +23,7 @@ function AdminRouter() {
       <Route path="/menu-builder" component={MenuBuilder} />
       <Route path="/orders" component={Orders} />
       <Route path="/embed" component={Embed} />
+      <Route path="/theme" component={Theme} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -18,24 +18,9 @@ const menuItems = [
     icon: Store,
   },
   {
-    title: "Menu Builder",
-    url: "/menu-builder",
-    icon: UtensilsCrossed,
-  },
-  {
     title: "Orders",
     url: "/orders",
     icon: ShoppingBag,
-  },
-  {
-    title: "Theme & Embed",
-    url: "/customize",
-    icon: Palette,
-  },
-  {
-    title: "Embed Code",
-    url: "/embed",
-    icon: Code,
   },
 ];
 
