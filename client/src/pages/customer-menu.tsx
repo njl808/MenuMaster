@@ -162,6 +162,31 @@ export default function CustomerMenu() {
     };
   }, [restaurant]);
 
+  // Scroll-based active category detection
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!categories || categories.length === 0) return;
+
+      const scrollPosition = window.scrollY + 200; // Offset for header
+
+      for (const category of categories) {
+        const element = categoryRefs.current[category.id];
+        if (element) {
+          const { offsetTop, offsetHeight } = element;
+          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
+            setActiveCategory(category.id);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll(); // Set initial active category
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [categories]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Banner */}
