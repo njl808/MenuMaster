@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Settings, Eye, Code, Palette, Pencil } from "lucide-react";
+import { Plus, Settings, Eye, Code, Palette, Pencil, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -93,6 +94,20 @@ export default function Restaurants() {
       toast({
         title: "Restaurant updated",
         description: "Your changes have been saved.",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/restaurants/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/restaurants"] });
+      toast({
+        title: "Restaurant deleted",
+        description: "The restaurant has been removed.",
       });
     },
   });
@@ -292,6 +307,28 @@ export default function Restaurants() {
                   <Pencil className="w-3 h-3 mr-1" />
                   Edit
                 </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="sm" data-testid={`button-delete-${restaurant.id}`}>
+                      <Trash2 className="w-3 h-3 mr-1" />
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Restaurant?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete "{restaurant.name}" and all its categories, menu items, and data. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => deleteMutation.mutate(restaurant.id)} data-testid={`button-confirm-delete-${restaurant.id}`}>
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
                 <Button variant="default" size="sm" asChild data-testid={`button-menu-builder-${restaurant.id}`}>
                   <Link href={`/menu-builder?restaurantId=${restaurant.id}`}>
                     <Settings className="w-3 h-3 mr-1" />
