@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Plus, Settings, Eye, Code, Palette, Pencil, Trash2 } from "lucide-react";
+import { Plus, Settings, Eye, Code, Palette, Pencil, Trash2, MoreVertical } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -285,75 +286,99 @@ export default function Restaurants() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="space-y-4">
           {restaurants.map((restaurant) => (
             <Card key={restaurant.id} className="hover-elevate">
-              <CardHeader>
-                <CardTitle data-testid={`text-restaurant-name-${restaurant.id}`}>{restaurant.name}</CardTitle>
-                <CardDescription className="line-clamp-2">{restaurant.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Payment Mode:</span>
-                    <span className={`font-medium ${restaurant.stripePublishableKey ? 'text-primary' : 'text-muted-foreground'}`}>
-                      {restaurant.stripePublishableKey ? 'Stripe Active' : 'Demo Mode'}
-                    </span>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-6">
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h3 className="text-xl font-semibold" data-testid={`text-restaurant-name-${restaurant.id}`}>
+                          {restaurant.name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground mt-1 line-clamp-1">
+                          {restaurant.description}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4 mt-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="text-muted-foreground">Payment:</span>
+                        <span className={`font-medium ${restaurant.stripePublishableKey ? 'text-primary' : 'text-muted-foreground'}`}>
+                          {restaurant.stripePublishableKey ? 'Stripe Active' : 'Demo Mode'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button variant="default" size="sm" asChild data-testid={`button-menu-builder-${restaurant.id}`}>
+                      <Link href={`/menu-builder?restaurantId=${restaurant.id}`}>
+                        <Settings className="w-4 h-4 mr-2" />
+                        Menu Builder
+                      </Link>
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" data-testid={`button-restaurant-actions-${restaurant.id}`}>
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleEdit(restaurant)} data-testid={`button-edit-${restaurant.id}`}>
+                          <Pencil className="w-4 h-4 mr-2" />
+                          Edit Restaurant
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/menu/${restaurant.id}`} data-testid={`button-preview-${restaurant.id}`}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            Preview Menu
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/theme?restaurantId=${restaurant.id}`} data-testid={`button-theme-${restaurant.id}`}>
+                            <Palette className="w-4 h-4 mr-2" />
+                            Theme Settings
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/embed?restaurantId=${restaurant.id}`} data-testid={`button-embed-${restaurant.id}`}>
+                            <Code className="w-4 h-4 mr-2" />
+                            Embed Code
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem 
+                              onSelect={(e) => e.preventDefault()}
+                              data-testid={`button-delete-${restaurant.id}`}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete Restaurant
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Restaurant?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete "{restaurant.name}" and all its categories, menu items, and data. This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteMutation.mutate(restaurant.id)} data-testid={`button-confirm-delete-${restaurant.id}`}>
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </CardContent>
-              <CardFooter className="flex gap-2 flex-wrap">
-                <Button variant="outline" size="sm" onClick={() => handleEdit(restaurant)} data-testid={`button-edit-${restaurant.id}`}>
-                  <Pencil className="w-3 h-3 mr-1" />
-                  Edit
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="sm" data-testid={`button-delete-${restaurant.id}`}>
-                      <Trash2 className="w-3 h-3 mr-1" />
-                      Delete
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Restaurant?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will permanently delete "{restaurant.name}" and all its categories, menu items, and data. This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => deleteMutation.mutate(restaurant.id)} data-testid={`button-confirm-delete-${restaurant.id}`}>
-                        Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-                <Button variant="default" size="sm" asChild data-testid={`button-menu-builder-${restaurant.id}`}>
-                  <Link href={`/menu-builder?restaurantId=${restaurant.id}`}>
-                    <Settings className="w-3 h-3 mr-1" />
-                    Menu Builder
-                  </Link>
-                </Button>
-                <Button variant="outline" size="sm" asChild data-testid={`button-preview-${restaurant.id}`}>
-                  <Link href={`/menu/${restaurant.id}`}>
-                    <Eye className="w-3 h-3 mr-1" />
-                    Preview
-                  </Link>
-                </Button>
-                <Button variant="outline" size="sm" asChild data-testid={`button-theme-${restaurant.id}`}>
-                  <Link href={`/theme?restaurantId=${restaurant.id}`}>
-                    <Palette className="w-3 h-3 mr-1" />
-                    Theme
-                  </Link>
-                </Button>
-                <Button variant="outline" size="sm" asChild data-testid={`button-embed-${restaurant.id}`}>
-                  <Link href={`/embed?restaurantId=${restaurant.id}`}>
-                    <Code className="w-3 h-3 mr-1" />
-                    Embed
-                  </Link>
-                </Button>
-              </CardFooter>
             </Card>
           ))}
         </div>
