@@ -28,6 +28,7 @@ export interface IStorage {
   getAllRestaurants(): Promise<Restaurant[]>;
   createRestaurant(restaurant: InsertRestaurant): Promise<Restaurant>;
   updateRestaurant(id: string, data: Partial<InsertRestaurant>): Promise<Restaurant | undefined>;
+  deleteRestaurant(id: string): Promise<void>;
   
   // Categories
   getCategory(id: string): Promise<Category | undefined>;
@@ -99,6 +100,10 @@ export class DatabaseStorage implements IStorage {
   async updateRestaurant(id: string, data: Partial<InsertRestaurant>): Promise<Restaurant | undefined> {
     const result = await db.update(restaurants).set(data).where(eq(restaurants.id, id)).returning();
     return result[0];
+  }
+
+  async deleteRestaurant(id: string): Promise<void> {
+    await db.delete(restaurants).where(eq(restaurants.id, id));
   }
 
   // Categories

@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { storage } from "./storage";
 import { insertRestaurantSchema, insertCategorySchema, insertMenuItemSchema, insertModifierSchema, insertLocationSchema, insertLocationMenuOverrideSchema, insertCustomerSchema, insertCustomerFavoriteSchema, insertOrderSchema } from "@shared/schema";
 import { hashPassword, comparePasswords, sanitizeCustomer } from "./customer-auth";
+import { ObjectStorageService } from "./objectStorage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Helper function to sanitize restaurant data (remove secret keys)
@@ -56,6 +57,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       // Never expose secret keys to clients
       res.json(sanitizeRestaurant(restaurant));
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/restaurants/:id", async (req, res) => {
+    try {
+      await storage.deleteRestaurant(req.params.id);
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -395,6 +405,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(sanitizedOrders);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Serve public objects from object storage
+  app.get("/public-objects/:filePath(*)", async (req, res) => {
+    const filePath = req.params.filePath;
+    const objectStorage = new ObjectStorageService();
+    try {
+      const file = await objectStorage.searchPublicObject(filePath);
+      if (!file) {
+        return res.status(404).json({ error: "File not found" });
+      }
+      await objectStorage.downloadObject(file, res);
+    } catch (error: any) {
+      console.error("Error searching for public object:", error);
+      return res.status(500).json({ error: "Internal server error" });
     }
   });
 
