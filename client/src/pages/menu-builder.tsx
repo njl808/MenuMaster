@@ -4,6 +4,7 @@ import { Plus, Pencil, Trash2, GripVertical, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -101,6 +102,29 @@ export default function MenuBuilder() {
     },
   });
 
+  const deleteCategoryMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/categories/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      setSelectedCategory(null);
+      toast({ title: "Category deleted successfully" });
+    },
+  });
+
+  const deleteItemMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/menu-items/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/menu-items"] });
+      toast({ title: "Menu item deleted successfully" });
+    },
+  });
+
   if (!restaurantId) {
     return <div className="p-6">Please select a restaurant first</div>;
   }
@@ -181,19 +205,39 @@ export default function MenuBuilder() {
               </div>
             ) : (
               categories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
-                  data-testid={`button-category-${category.id}`}
-                  className={`w-full text-left p-3 rounded-md transition-colors hover-elevate ${
-                    selectedCategory === category.id ? "bg-primary/10" : ""
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{category.name}</span>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                </button>
+                <div key={category.id} className={`flex items-center gap-2 p-3 rounded-md ${selectedCategory === category.id ? "bg-primary/10" : ""}`}>
+                  <button
+                    onClick={() => setSelectedCategory(category.id)}
+                    data-testid={`button-category-${category.id}`}
+                    className="flex-1 text-left hover-elevate rounded-md p-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{category.name}</span>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  </button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" data-testid={`button-delete-category-${category.id}`}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Category?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete "{category.name}" and all its menu items. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteCategoryMutation.mutate(category.id)} data-testid={`button-confirm-delete-category-${category.id}`}>
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               ))
             )}
           </CardContent>
@@ -342,8 +386,30 @@ export default function MenuBuilder() {
                                 ))}
                               </div>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right flex flex-col gap-2 items-end">
                               <p className="text-lg font-bold text-primary">${item.price}</p>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="outline" size="sm" data-testid={`button-delete-item-${item.id}`}>
+                                    <Trash2 className="w-3 h-3 mr-1" />
+                                    Delete
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Menu Item?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will permanently delete "{item.name}". This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => deleteItemMutation.mutate(item.id)} data-testid={`button-confirm-delete-item-${item.id}`}>
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </div>
                         </div>
