@@ -143,14 +143,35 @@ export default function CustomerMenu() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Hero Banner */}
+      {restaurant?.bannerUrl && (
+        <div className="relative h-32 sm:h-48 md:h-64 w-full overflow-hidden">
+          <img 
+            src={restaurant.bannerUrl} 
+            alt={restaurant.name}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+          {restaurant.logoUrl && (
+            <div className="absolute bottom-2 left-4 sm:bottom-4 sm:left-6">
+              <img 
+                src={restaurant.logoUrl} 
+                alt={`${restaurant.name} logo`}
+                className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-lg bg-white object-cover border-2 sm:border-4 border-white shadow-lg"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Header */}
       <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold" data-testid="text-restaurant-name">{restaurant?.name || "Menu"}</h1>
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:py-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg sm:text-2xl font-bold truncate" data-testid="text-restaurant-name">{restaurant?.name || "Menu"}</h1>
               {restaurant?.description && (
-                <p className="text-sm text-muted-foreground mt-1">{restaurant.description}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 line-clamp-1">{restaurant.description}</p>
               )}
             </div>
             <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>

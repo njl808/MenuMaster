@@ -9,6 +9,7 @@ export const restaurants = pgTable("restaurants", {
   name: text("name").notNull(),
   description: text("description"),
   logoUrl: text("logo_url"),
+  bannerUrl: text("banner_url"),
   stripePublishableKey: text("stripe_publishable_key"), // Optional per-restaurant Stripe keys
   stripeSecretKey: text("stripe_secret_key"), // Encrypted in production
   themeConfig: jsonb("theme_config").$type<{

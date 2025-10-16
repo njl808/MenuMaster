@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ImageUpload } from "@/components/image-upload";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { Link } from "wouter";
@@ -19,6 +20,7 @@ export default function Restaurants() {
     name: "",
     description: "",
     logoUrl: "",
+    bannerUrl: "",
     stripePublishableKey: "",
     stripeSecretKey: "",
     themeConfig: { primaryColor: "#16a34a", accentColor: "#f97316" },
@@ -40,6 +42,7 @@ export default function Restaurants() {
         name: "",
         description: "",
         logoUrl: "",
+        bannerUrl: "",
         stripePublishableKey: "",
         stripeSecretKey: "",
         themeConfig: { primaryColor: "#16a34a", accentColor: "#f97316" },
@@ -107,6 +110,24 @@ export default function Restaurants() {
                     value={formData.description || ""}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={3}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Restaurant Logo</Label>
+                  <p className="text-sm text-muted-foreground mb-2">Square image recommended (200x200px)</p>
+                  <ImageUpload
+                    value={formData.logoUrl || ""}
+                    onChange={(url) => setFormData({ ...formData, logoUrl: url })}
+                    onRemove={() => setFormData({ ...formData, logoUrl: "" })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Banner Image</Label>
+                  <p className="text-sm text-muted-foreground mb-2">Wide image recommended (1200x400px)</p>
+                  <ImageUpload
+                    value={formData.bannerUrl || ""}
+                    onChange={(url) => setFormData({ ...formData, bannerUrl: url })}
+                    onRemove={() => setFormData({ ...formData, bannerUrl: "" })}
                   />
                 </div>
                 <div className="space-y-2">

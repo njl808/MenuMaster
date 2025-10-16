@@ -378,6 +378,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // TODO: SECURITY - This endpoint needs authentication before production use
+  // Currently exposes order data without verifying restaurant ownership
+  // Recommendation: Implement restaurant owner authentication/session management
+  app.get("/api/restaurants/:restaurantId/orders", async (req, res) => {
+    try {
+      const orders = await storage.getOrdersByRestaurant(req.params.restaurantId);
+      
+      // Sanitize sensitive customer data for privacy (partial mitigation)
+      const sanitizedOrders = orders.map(order => ({
+        ...order,
+        customerEmail: order.customerEmail ? `${order.customerEmail.substring(0, 3)}***` : "",
+        customerPhone: order.customerPhone ? `***${order.customerPhone.slice(-4)}` : null,
+      }));
+      
+      res.json(sanitizedOrders);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Stripe payment intent route (uses restaurant-specific keys)
   app.post("/api/create-payment-intent", async (req, res) => {
     try {
@@ -394,7 +414,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Initialize Stripe with restaurant-specific key
       const stripe = new Stripe(restaurant.stripeSecretKey, {
-        apiVersion: "2023-10-16",
+        apiVersion: "2025-09-30.clover",
       });
 
       const paymentIntent = await stripe.paymentIntents.create({

@@ -37,6 +37,14 @@ A full-stack restaurant menu management and ordering system that enables restaur
 
 Preferred communication style: Simple, everyday language.
 
+## Known Limitations & TODOs
+
+**Security - Orders API Endpoint:**
+- GET `/api/restaurants/:restaurantId/orders` endpoint exists but lacks authentication
+- Currently sanitizes email/phone but still exposes customer names and order details
+- **Requires:** Restaurant owner authentication system before production use
+- **Recommendation:** Implement session-based or token-based auth for restaurant owners
+
 ## System Architecture
 
 ### Frontend Architecture
