@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
-import { insertRestaurantSchema, insertCategorySchema, insertMenuItemSchema, insertModifierSchema, insertLocationSchema, insertLocationMenuOverrideSchema, insertCustomerSchema, insertCustomerFavoriteSchema, insertOrderSchema } from "@shared/schema";
+import { insertRestaurantSchema, insertCategorySchema, insertMenuItemSchema, insertModifierGroupSchema, insertModifierSchema, insertLocationSchema, insertLocationMenuOverrideSchema, insertCustomerSchema, insertCustomerFavoriteSchema, insertOrderSchema } from "@shared/schema";
 import { hashPassword, comparePasswords, sanitizeCustomer } from "./customer-auth";
 import { ObjectStorageService } from "./objectStorage";
 
@@ -162,10 +162,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Modifier routes
-  app.get("/api/modifiers/:menuItemId", async (req, res) => {
+  // Modifier Group routes
+  app.get("/api/modifier-groups/:menuItemId", async (req, res) => {
     try {
-      const modifiers = await storage.getModifiersByMenuItem(req.params.menuItemId);
+      const groups = await storage.getModifierGroupsByMenuItem(req.params.menuItemId);
+      res.json(groups);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/modifier-groups", async (req, res) => {
+    try {
+      const data = insertModifierGroupSchema.parse(req.body);
+      const group = await storage.createModifierGroup(data);
+      res.json(group);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/modifier-groups/:id", async (req, res) => {
+    try {
+      const group = await storage.updateModifierGroup(req.params.id, req.body);
+      if (!group) {
+        return res.status(404).json({ error: "Modifier group not found" });
+      }
+      res.json(group);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/modifier-groups/:id", async (req, res) => {
+    try {
+      await storage.deleteModifierGroup(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Modifier routes
+  app.get("/api/modifiers/:groupId", async (req, res) => {
+    try {
+      const modifiers = await storage.getModifiersByGroup(req.params.groupId);
       res.json(modifiers);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -179,6 +220,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(modifier);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.patch("/api/modifiers/:id", async (req, res) => {
+    try {
+      const modifier = await storage.updateModifier(req.params.id, req.body);
+      if (!modifier) {
+        return res.status(404).json({ error: "Modifier not found" });
+      }
+      res.json(modifier);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 

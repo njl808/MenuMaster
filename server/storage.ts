@@ -5,6 +5,8 @@ import {
   type InsertCategory,
   type MenuItem,
   type InsertMenuItem,
+  type ModifierGroup,
+  type InsertModifierGroup,
   type Modifier,
   type InsertModifier,
   type Location,
@@ -19,7 +21,7 @@ import {
   type InsertOrder,
 } from "@shared/schema";
 import { db } from "./db";
-import { restaurants, categories, menuItems, modifiers, locations, locationMenuOverrides, customers, customerFavorites, orders } from "@shared/schema";
+import { restaurants, categories, menuItems, modifierGroups, modifiers, locations, locationMenuOverrides, customers, customerFavorites, orders } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 export interface IStorage {
@@ -45,9 +47,16 @@ export interface IStorage {
   updateMenuItem(id: string, data: Partial<InsertMenuItem>): Promise<MenuItem | undefined>;
   deleteMenuItem(id: string): Promise<void>;
   
+  // Modifier Groups
+  getModifierGroupsByMenuItem(menuItemId: string): Promise<ModifierGroup[]>;
+  createModifierGroup(group: InsertModifierGroup): Promise<ModifierGroup>;
+  updateModifierGroup(id: string, data: Partial<InsertModifierGroup>): Promise<ModifierGroup | undefined>;
+  deleteModifierGroup(id: string): Promise<void>;
+  
   // Modifiers
-  getModifiersByMenuItem(menuItemId: string): Promise<Modifier[]>;
+  getModifiersByGroup(groupId: string): Promise<Modifier[]>;
   createModifier(modifier: InsertModifier): Promise<Modifier>;
+  updateModifier(id: string, data: Partial<InsertModifier>): Promise<Modifier | undefined>;
   deleteModifier(id: string): Promise<void>;
   
   // Locations
@@ -166,13 +175,41 @@ export class DatabaseStorage implements IStorage {
     await db.delete(menuItems).where(eq(menuItems.id, id));
   }
 
+  // Modifier Groups
+  async getModifierGroupsByMenuItem(menuItemId: string): Promise<ModifierGroup[]> {
+    return await db.select().from(modifierGroups)
+      .where(eq(modifierGroups.menuItemId, menuItemId))
+      .orderBy(modifierGroups.displayOrder);
+  }
+
+  async createModifierGroup(group: InsertModifierGroup): Promise<ModifierGroup> {
+    const result = await db.insert(modifierGroups).values(group).returning();
+    return result[0];
+  }
+
+  async updateModifierGroup(id: string, data: Partial<InsertModifierGroup>): Promise<ModifierGroup | undefined> {
+    const result = await db.update(modifierGroups).set(data).where(eq(modifierGroups.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteModifierGroup(id: string): Promise<void> {
+    await db.delete(modifierGroups).where(eq(modifierGroups.id, id));
+  }
+
   // Modifiers
-  async getModifiersByMenuItem(menuItemId: string): Promise<Modifier[]> {
-    return await db.select().from(modifiers).where(eq(modifiers.menuItemId, menuItemId));
+  async getModifiersByGroup(groupId: string): Promise<Modifier[]> {
+    return await db.select().from(modifiers)
+      .where(eq(modifiers.modifierGroupId, groupId))
+      .orderBy(modifiers.displayOrder);
   }
 
   async createModifier(modifier: InsertModifier): Promise<Modifier> {
     const result = await db.insert(modifiers).values(modifier).returning();
+    return result[0];
+  }
+
+  async updateModifier(id: string, data: Partial<InsertModifier>): Promise<Modifier | undefined> {
+    const result = await db.update(modifiers).set(data).where(eq(modifiers.id, id)).returning();
     return result[0];
   }
 
