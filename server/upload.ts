@@ -30,7 +30,7 @@ export function setupImageUpload(app: Express) {
 
       // Upload to object storage
       const objectStorage = new ObjectStorageService();
-      const url = await objectStorage.uploadFile(req.file.buffer, filename);
+      const url = await objectStorage.uploadFile(req.file.buffer, filename, req.file.mimetype);
 
       res.json({ url });
     } catch (error: any) {

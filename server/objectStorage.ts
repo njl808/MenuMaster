@@ -79,7 +79,7 @@ export class ObjectStorageService {
     }
   }
 
-  async uploadFile(buffer: Buffer, filename: string): Promise<string> {
+  async uploadFile(buffer: Buffer, filename: string, contentType: string = 'image/jpeg'): Promise<string> {
     const publicPaths = this.getPublicObjectSearchPaths();
     const publicPath = publicPaths[0];
     const fullPath = `${publicPath}/${filename}`;
@@ -90,7 +90,7 @@ export class ObjectStorageService {
     
     await file.save(buffer, {
       metadata: {
-        contentType: 'image/jpeg',
+        contentType,
       },
     });
 
