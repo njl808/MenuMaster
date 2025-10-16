@@ -1,10 +1,11 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Plus, Pencil, Trash2, GripVertical, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, GripVertical, ChevronRight, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -533,64 +534,74 @@ export default function MenuBuilder() {
                                 ))}
                               </div>
                             </div>
-                            <div className="text-right flex flex-col gap-2 items-end">
-                              <p className="text-lg font-bold text-primary">${item.price}</p>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => {
-                                  setEditingItem(item);
-                                  setItemForm({
-                                    categoryId: item.categoryId,
-                                    name: item.name,
-                                    description: item.description || "",
-                                    price: item.price,
-                                    imageUrl: item.imageUrl || "",
-                                    dietaryTags: item.dietaryTags || [],
-                                    isAvailable: item.isAvailable,
-                                    displayOrder: item.displayOrder,
-                                  });
-                                  setItemDialog(true);
-                                }}
-                                data-testid={`button-edit-item-${item.id}`}
-                              >
-                                <Pencil className="w-3 h-3 mr-1" />
-                                Edit
-                              </Button>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => {
-                                  setSelectedMenuItem(item.id);
-                                  setModifierDialog(true);
-                                }}
-                                data-testid={`button-manage-options-${item.id}`}
-                              >
-                                <Plus className="w-3 h-3 mr-1" />
-                                Manage Options
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="outline" size="sm" data-testid={`button-delete-item-${item.id}`}>
-                                    <Trash2 className="w-3 h-3 mr-1" />
-                                    Delete
+                            <div className="text-right flex items-start gap-2">
+                              <p className="text-lg font-bold text-primary">£{item.price}</p>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" data-testid={`button-menu-item-actions-${item.id}`}>
+                                    <MoreVertical className="w-4 h-4" />
                                   </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete Menu Item?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      This will permanently delete "{item.name}". This action cannot be undone.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => deleteItemMutation.mutate(item.id)} data-testid={`button-confirm-delete-item-${item.id}`}>
-                                      Delete
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setEditingItem(item);
+                                      setItemForm({
+                                        categoryId: item.categoryId,
+                                        name: item.name,
+                                        description: item.description || "",
+                                        price: item.price,
+                                        imageUrl: item.imageUrl || "",
+                                        dietaryTags: item.dietaryTags || [],
+                                        isAvailable: item.isAvailable,
+                                        displayOrder: item.displayOrder,
+                                      });
+                                      setItemDialog(true);
+                                    }}
+                                    data-testid={`button-edit-item-${item.id}`}
+                                  >
+                                    <Pencil className="w-4 h-4 mr-2" />
+                                    Edit Item
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedMenuItem(item.id);
+                                      setModifierDialog(true);
+                                    }}
+                                    data-testid={`button-manage-options-${item.id}`}
+                                  >
+                                    <Plus className="w-4 h-4 mr-2" />
+                                    Manage Options
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <DropdownMenuItem 
+                                        onSelect={(e) => e.preventDefault()}
+                                        data-testid={`button-delete-item-${item.id}`}
+                                        className="text-destructive focus:text-destructive"
+                                      >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete Item
+                                      </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete Menu Item?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          This will permanently delete "{item.name}". This action cannot be undone.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => deleteItemMutation.mutate(item.id)} data-testid={`button-confirm-delete-item-${item.id}`}>
+                                          Delete
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </div>
                         </div>
@@ -691,7 +702,7 @@ export default function MenuBuilder() {
                             <Input
                               type="number"
                               min="0"
-                              value={groupForm.minSelections}
+                              value={groupForm.minSelections || 0}
                               onChange={(e) =>
                                 setGroupForm({ ...groupForm, minSelections: parseInt(e.target.value) || 0 })
                               }
@@ -743,7 +754,7 @@ export default function MenuBuilder() {
                           <CardDescription className="text-xs">
                             {group.selectionType === "single" ? "Single choice" : "Multiple choice"}
                             {group.isRequired && " • Required"}
-                            {group.minSelections > 0 && ` • Min: ${group.minSelections}`}
+                            {(group.minSelections ?? 0) > 0 && ` • Min: ${group.minSelections}`}
                             {group.maxSelections && ` • Max: ${group.maxSelections}`}
                           </CardDescription>
                         </div>

@@ -206,7 +206,7 @@ export default function CustomerMenu() {
                                 <div className="flex-1">
                                   <h4 className="font-medium text-sm">{cartItem.item.name}</h4>
                                   <p className="text-sm text-primary font-semibold mt-1">
-                                    ${(parseFloat(cartItem.item.price) * cartItem.quantity).toFixed(2)}
+                                    £{(parseFloat(cartItem.item.price) * cartItem.quantity).toFixed(2)}
                                   </p>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -248,7 +248,7 @@ export default function CustomerMenu() {
                         <div className="flex justify-between items-center mb-4">
                           <span className="text-lg font-semibold">Total:</span>
                           <span className="text-2xl font-bold text-primary" data-testid="text-cart-total">
-                            ${cartTotal.toFixed(2)}
+                            £{cartTotal.toFixed(2)}
                           </span>
                         </div>
                         <Button 
@@ -330,7 +330,7 @@ export default function CustomerMenu() {
                       {item.name}
                     </CardTitle>
                     <span className="text-lg font-bold text-primary whitespace-nowrap">
-                      ${item.price}
+                      £{item.price}
                     </span>
                   </div>
                   {item.description && (

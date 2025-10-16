@@ -300,7 +300,7 @@ function StripeCheckoutForm({
                 disabled={isProcessing || !stripe || !elements}
                 data-testid="button-place-order"
               >
-                {isProcessing ? "Processing..." : `Pay $${total.toFixed(2)}`}
+                {isProcessing ? "Processing..." : `Pay £${total.toFixed(2)}`}
               </Button>
             </form>
           </div>
@@ -318,14 +318,14 @@ function StripeCheckoutForm({
                       {item.quantity}x {item.item.name}
                     </span>
                     <span className="text-sm font-medium">
-                      ${(parseFloat(item.item.price) * item.quantity).toFixed(2)}
+                      £{(parseFloat(item.item.price) * item.quantity).toFixed(2)}
                     </span>
                   </div>
                 ))}
                 <div className="border-t pt-4">
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total:</span>
-                    <span className="text-primary">${total.toFixed(2)}</span>
+                    <span className="text-primary">£{total.toFixed(2)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -462,7 +462,7 @@ function DemoCheckout({
                 disabled={isProcessing}
                 data-testid="button-place-order"
               >
-                {isProcessing ? "Processing..." : `Place Demo Order - $${total.toFixed(2)}`}
+                {isProcessing ? "Processing..." : `Place Demo Order - £${total.toFixed(2)}`}
               </Button>
             </form>
           </div>
@@ -480,14 +480,14 @@ function DemoCheckout({
                       {item.quantity}x {item.item.name}
                     </span>
                     <span className="text-sm font-medium">
-                      ${(parseFloat(item.item.price) * item.quantity).toFixed(2)}
+                      £{(parseFloat(item.item.price) * item.quantity).toFixed(2)}
                     </span>
                   </div>
                 ))}
                 <div className="border-t pt-4">
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total:</span>
-                    <span className="text-primary">${total.toFixed(2)}</span>
+                    <span className="text-primary">£{total.toFixed(2)}</span>
                   </div>
                 </div>
               </CardContent>
