@@ -11,11 +11,15 @@ import {
   type InsertLocation,
   type LocationMenuOverride,
   type InsertLocationMenuOverride,
+  type Customer,
+  type InsertCustomer,
+  type CustomerFavorite,
+  type InsertCustomerFavorite,
   type Order,
   type InsertOrder,
 } from "@shared/schema";
 import { db } from "./db";
-import { restaurants, categories, menuItems, modifiers, locations, locationMenuOverrides, orders } from "@shared/schema";
+import { restaurants, categories, menuItems, modifiers, locations, locationMenuOverrides, customers, customerFavorites, orders } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 
 export interface IStorage {
@@ -56,6 +60,17 @@ export interface IStorage {
   getLocationOverrides(locationId: string): Promise<LocationMenuOverride[]>;
   createLocationOverride(override: InsertLocationMenuOverride): Promise<LocationMenuOverride>;
   deleteLocationOverride(id: string): Promise<void>;
+  
+  // Customers
+  getCustomer(id: string): Promise<Customer | undefined>;
+  getCustomerByEmail(email: string): Promise<Customer | undefined>;
+  createCustomer(customer: InsertCustomer): Promise<Customer>;
+  updateCustomer(id: string, data: Partial<InsertCustomer>): Promise<Customer | undefined>;
+  
+  // Customer Favorites
+  getFavoritesByCustomer(customerId: string): Promise<CustomerFavorite[]>;
+  createFavorite(favorite: InsertCustomerFavorite): Promise<CustomerFavorite>;
+  deleteFavorite(id: string): Promise<void>;
   
   // Orders
   getOrder(id: string): Promise<Order | undefined>;
@@ -196,6 +211,41 @@ export class DatabaseStorage implements IStorage {
 
   async deleteLocationOverride(id: string): Promise<void> {
     await db.delete(locationMenuOverrides).where(eq(locationMenuOverrides.id, id));
+  }
+
+  // Customers
+  async getCustomer(id: string): Promise<Customer | undefined> {
+    const result = await db.select().from(customers).where(eq(customers.id, id));
+    return result[0];
+  }
+
+  async getCustomerByEmail(email: string): Promise<Customer | undefined> {
+    const result = await db.select().from(customers).where(eq(customers.email, email));
+    return result[0];
+  }
+
+  async createCustomer(customer: InsertCustomer): Promise<Customer> {
+    const result = await db.insert(customers).values(customer).returning();
+    return result[0];
+  }
+
+  async updateCustomer(id: string, data: Partial<InsertCustomer>): Promise<Customer | undefined> {
+    const result = await db.update(customers).set(data).where(eq(customers.id, id)).returning();
+    return result[0];
+  }
+
+  // Customer Favorites
+  async getFavoritesByCustomer(customerId: string): Promise<CustomerFavorite[]> {
+    return await db.select().from(customerFavorites).where(eq(customerFavorites.customerId, customerId));
+  }
+
+  async createFavorite(favorite: InsertCustomerFavorite): Promise<CustomerFavorite> {
+    const result = await db.insert(customerFavorites).values(favorite).returning();
+    return result[0];
+  }
+
+  async deleteFavorite(id: string): Promise<void> {
+    await db.delete(customerFavorites).where(eq(customerFavorites.id, id));
   }
 
   // Orders

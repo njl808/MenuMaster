@@ -2,7 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
-import { insertRestaurantSchema, insertCategorySchema, insertMenuItemSchema, insertModifierSchema, insertLocationSchema, insertLocationMenuOverrideSchema, insertOrderSchema } from "@shared/schema";
+import { insertRestaurantSchema, insertCategorySchema, insertMenuItemSchema, insertModifierSchema, insertLocationSchema, insertLocationMenuOverrideSchema, insertCustomerSchema, insertCustomerFavoriteSchema, insertOrderSchema } from "@shared/schema";
+import { hashPassword, comparePasswords, sanitizeCustomer } from "./customer-auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Helper function to sanitize restaurant data (remove secret keys)
@@ -244,6 +245,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/location-overrides/:id", async (req, res) => {
     try {
       await storage.deleteLocationOverride(req.params.id);
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Customer auth routes
+  app.post("/api/customers/register", async (req, res) => {
+    try {
+      // Validate request body with schema
+      const validatedData = insertCustomerSchema.parse(req.body);
+      const { email, password, ...rest } = validatedData;
+      
+      // Check if customer already exists
+      const existing = await storage.getCustomerByEmail(email);
+      if (existing) {
+        return res.status(400).json({ error: "Email already registered" });
+      }
+
+      // Hash password and create customer
+      const hashedPassword = await hashPassword(password);
+      const customer = await storage.createCustomer({
+        email,
+        password: hashedPassword,
+        ...rest,
+      });
+
+      res.json(sanitizeCustomer(customer));
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/customers/login", async (req, res) => {
+    try {
+      // Validate login credentials with schema subset
+      const loginSchema = insertCustomerSchema.pick({ email: true, password: true });
+      const { email, password } = loginSchema.parse(req.body);
+      
+      const customer = await storage.getCustomerByEmail(email);
+      if (!customer) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      const isValid = await comparePasswords(password, customer.password);
+      if (!isValid) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      res.json(sanitizeCustomer(customer));
+    } catch (error: any) {
+      // Validation errors should return 400, other errors 500
+      if (error.name === 'ZodError' || error.message?.includes('validation')) {
+        return res.status(400).json({ error: error.message });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Customer favorites routes
+  app.get("/api/customers/:customerId/favorites", async (req, res) => {
+    try {
+      const favorites = await storage.getFavoritesByCustomer(req.params.customerId);
+      res.json(favorites);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  app.post("/api/customers/favorites", async (req, res) => {
+    try {
+      const data = insertCustomerFavoriteSchema.parse(req.body);
+      const favorite = await storage.createFavorite(data);
+      res.json(favorite);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  app.delete("/api/customers/favorites/:id", async (req, res) => {
+    try {
+      await storage.deleteFavorite(req.params.id);
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });

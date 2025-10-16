@@ -26,7 +26,7 @@ export const restaurants = pgTable("restaurants", {
 export const customers = pgTable("customers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: text("email").notNull().unique(),
-  password: text("password").notNull(),
+  password: text("password").notNull(), // Stored as hashed password with salt (scrypt)
   firstName: text("first_name"),
   lastName: text("last_name"),
   phone: text("phone"),
