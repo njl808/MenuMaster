@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ImageUpload } from "@/components/image-upload";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import type { Restaurant, Category, MenuItem, Modifier, InsertCategory, InsertMenuItem, InsertModifier } from "@shared/schema";
@@ -254,13 +255,11 @@ export default function MenuBuilder() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="item-image">Image URL</Label>
-                        <Input
-                          id="item-image"
-                          data-testid="input-item-image"
-                          placeholder="https://..."
+                        <Label>Item Image</Label>
+                        <ImageUpload
                           value={itemForm.imageUrl || ""}
-                          onChange={(e) => setItemForm({ ...itemForm, imageUrl: e.target.value })}
+                          onChange={(url) => setItemForm({ ...itemForm, imageUrl: url })}
+                          onRemove={() => setItemForm({ ...itemForm, imageUrl: "" })}
                         />
                       </div>
                       <div className="space-y-2">
