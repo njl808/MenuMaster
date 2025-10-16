@@ -18,7 +18,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function MenuBuilder() {
   const [location] = useLocation();
-  const params = new URLSearchParams(location.split("?")[1]);
+  const params = new URLSearchParams(window.location.search);
   const restaurantId = params.get("restaurantId");
   const { toast } = useToast();
   
