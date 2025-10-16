@@ -1,38 +1,177 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { 
+  type Restaurant, 
+  type InsertRestaurant,
+  type Category,
+  type InsertCategory,
+  type MenuItem,
+  type InsertMenuItem,
+  type Modifier,
+  type InsertModifier,
+  type Order,
+  type InsertOrder,
+} from "@shared/schema";
+import { db } from "./db";
+import { restaurants, categories, menuItems, modifiers, orders } from "@shared/schema";
+import { eq, and, desc } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // Restaurants
+  getRestaurant(id: string): Promise<Restaurant | undefined>;
+  getAllRestaurants(): Promise<Restaurant[]>;
+  createRestaurant(restaurant: InsertRestaurant): Promise<Restaurant>;
+  updateRestaurant(id: string, data: Partial<InsertRestaurant>): Promise<Restaurant | undefined>;
+  
+  // Categories
+  getCategory(id: string): Promise<Category | undefined>;
+  getCategoriesByRestaurant(restaurantId: string): Promise<Category[]>;
+  createCategory(category: InsertCategory): Promise<Category>;
+  updateCategory(id: string, data: Partial<InsertCategory>): Promise<Category | undefined>;
+  deleteCategory(id: string): Promise<void>;
+  
+  // Menu Items
+  getMenuItem(id: string): Promise<MenuItem | undefined>;
+  getMenuItemsByCategory(categoryId: string): Promise<MenuItem[]>;
+  getMenuItemsByRestaurant(restaurantId: string): Promise<MenuItem[]>;
+  createMenuItem(item: InsertMenuItem): Promise<MenuItem>;
+  updateMenuItem(id: string, data: Partial<InsertMenuItem>): Promise<MenuItem | undefined>;
+  deleteMenuItem(id: string): Promise<void>;
+  
+  // Modifiers
+  getModifiersByMenuItem(menuItemId: string): Promise<Modifier[]>;
+  createModifier(modifier: InsertModifier): Promise<Modifier>;
+  deleteModifier(id: string): Promise<void>;
+  
+  // Orders
+  getOrder(id: string): Promise<Order | undefined>;
+  getAllOrders(): Promise<Order[]>;
+  getOrdersByRestaurant(restaurantId: string): Promise<Order[]>;
+  createOrder(order: InsertOrder): Promise<Order>;
+  updateOrderStatus(id: string, status: string): Promise<Order | undefined>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  // Restaurants
+  async getRestaurant(id: string): Promise<Restaurant | undefined> {
+    const result = await db.select().from(restaurants).where(eq(restaurants.id, id));
+    return result[0];
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getAllRestaurants(): Promise<Restaurant[]> {
+    return await db.select().from(restaurants);
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async createRestaurant(restaurant: InsertRestaurant): Promise<Restaurant> {
+    const result = await db.insert(restaurants).values(restaurant).returning();
+    return result[0];
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async updateRestaurant(id: string, data: Partial<InsertRestaurant>): Promise<Restaurant | undefined> {
+    const result = await db.update(restaurants).set(data).where(eq(restaurants.id, id)).returning();
+    return result[0];
+  }
+
+  // Categories
+  async getCategory(id: string): Promise<Category | undefined> {
+    const result = await db.select().from(categories).where(eq(categories.id, id));
+    return result[0];
+  }
+
+  async getCategoriesByRestaurant(restaurantId: string): Promise<Category[]> {
+    return await db.select().from(categories)
+      .where(eq(categories.restaurantId, restaurantId))
+      .orderBy(categories.displayOrder);
+  }
+
+  async createCategory(category: InsertCategory): Promise<Category> {
+    const result = await db.insert(categories).values(category).returning();
+    return result[0];
+  }
+
+  async updateCategory(id: string, data: Partial<InsertCategory>): Promise<Category | undefined> {
+    const result = await db.update(categories).set(data).where(eq(categories.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteCategory(id: string): Promise<void> {
+    await db.delete(categories).where(eq(categories.id, id));
+  }
+
+  // Menu Items
+  async getMenuItem(id: string): Promise<MenuItem | undefined> {
+    const result = await db.select().from(menuItems).where(eq(menuItems.id, id));
+    return result[0];
+  }
+
+  async getMenuItemsByCategory(categoryId: string): Promise<MenuItem[]> {
+    return await db.select().from(menuItems)
+      .where(eq(menuItems.categoryId, categoryId))
+      .orderBy(menuItems.displayOrder);
+  }
+
+  async getMenuItemsByRestaurant(restaurantId: string): Promise<MenuItem[]> {
+    return await db.select().from(menuItems)
+      .innerJoin(categories, eq(menuItems.categoryId, categories.id))
+      .where(eq(categories.restaurantId, restaurantId))
+      .orderBy(menuItems.displayOrder)
+      .then(results => results.map(r => r.menu_items));
+  }
+
+  async createMenuItem(item: InsertMenuItem): Promise<MenuItem> {
+    const result = await db.insert(menuItems).values(item).returning();
+    return result[0];
+  }
+
+  async updateMenuItem(id: string, data: Partial<InsertMenuItem>): Promise<MenuItem | undefined> {
+    const result = await db.update(menuItems).set(data).where(eq(menuItems.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteMenuItem(id: string): Promise<void> {
+    await db.delete(menuItems).where(eq(menuItems.id, id));
+  }
+
+  // Modifiers
+  async getModifiersByMenuItem(menuItemId: string): Promise<Modifier[]> {
+    return await db.select().from(modifiers).where(eq(modifiers.menuItemId, menuItemId));
+  }
+
+  async createModifier(modifier: InsertModifier): Promise<Modifier> {
+    const result = await db.insert(modifiers).values(modifier).returning();
+    return result[0];
+  }
+
+  async deleteModifier(id: string): Promise<void> {
+    await db.delete(modifiers).where(eq(modifiers.id, id));
+  }
+
+  // Orders
+  async getOrder(id: string): Promise<Order | undefined> {
+    const result = await db.select().from(orders).where(eq(orders.id, id));
+    return result[0];
+  }
+
+  async getAllOrders(): Promise<Order[]> {
+    return await db.select().from(orders).orderBy(desc(orders.createdAt));
+  }
+
+  async getOrdersByRestaurant(restaurantId: string): Promise<Order[]> {
+    return await db.select().from(orders)
+      .where(eq(orders.restaurantId, restaurantId))
+      .orderBy(desc(orders.createdAt));
+  }
+
+  async createOrder(order: InsertOrder): Promise<Order> {
+    const result = await db.insert(orders).values(order).returning();
+    return result[0];
+  }
+
+  async updateOrderStatus(id: string, status: string): Promise<Order | undefined> {
+    const result = await db.update(orders)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(orders.id, id))
+      .returning();
+    return result[0];
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
