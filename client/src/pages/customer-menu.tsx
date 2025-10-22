@@ -1,18 +1,21 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute } from "wouter";
-import { ShoppingCart, Plus, Minus, Trash2, X, Star } from "lucide-react";
+import { ShoppingCart, Plus, Minus, Trash2, X, Star, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation as useWouterLocation } from "wouter";
-import type { Restaurant, Category, MenuItem } from "@shared/schema";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { Restaurant, Category, MenuItem, ModifierGroup, Modifier } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
 import burgerImg from "@assets/generated_images/Gourmet_burger_food_photo_be0260fb.png";
 import saladImg from "@assets/generated_images/Caesar_salad_food_photo_f979d014.png";
@@ -53,9 +56,12 @@ function hexToHSL(hex: string): string {
 }
 
 interface CartItem {
+  cartItemId: string;
   item: MenuItem;
   quantity: number;
   specialInstructions?: string;
+  selectedModifiers: Record<string, Modifier[]>;
+  finalPrice: number;
 }
 
 export default function CustomerMenu() {
@@ -66,6 +72,12 @@ export default function CustomerMenu() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
+
+  // State for modifier dialog
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+  const [isModifierDialogOpen, setIsModifierDialogOpen] = useState(false);
+  const [selectedModifiers, setSelectedModifiers] = useState<Record<string, Modifier[]>>({});
+  const [specialInstructions, setSpecialInstructions] = useState("");
 
   const { data: restaurant } = useQuery<Restaurant>({
     queryKey: ["/api/restaurants", restaurantId],
@@ -82,30 +94,70 @@ export default function CustomerMenu() {
     enabled: !!restaurantId,
   });
 
-  const addToCart = (item: MenuItem) => {
-    const existingIndex = cart.findIndex((c) => c.item.id === item.id);
-    if (existingIndex >= 0) {
-      const newCart = [...cart];
-      newCart[existingIndex].quantity += 1;
-      setCart(newCart);
-    } else {
-      setCart([...cart, { item, quantity: 1 }]);
-    }
-    toast({ title: `${item.name} added to cart` });
+  const { data: modifierGroups, isLoading: groupsLoading } = useQuery<ModifierGroup[]>({
+    queryKey: ["/api/modifier-groups", selectedItem?.id],
+    enabled: !!selectedItem,
+  });
+
+  const addToCart = (itemToAdd: MenuItem, mods: Record<string, Modifier[]>, instructions: string, price: number) => {
+    const newCartItem: CartItem = {
+      cartItemId: `${itemToAdd.id}-${Date.now()}`,
+      item: itemToAdd,
+      quantity: 1,
+      selectedModifiers: mods,
+      specialInstructions: instructions,
+      finalPrice: price,
+    };
+    setCart(prevCart => [...prevCart, newCartItem]);
+    toast({ title: `${itemToAdd.name} added to cart` });
+    setIsModifierDialogOpen(false);
+    setSelectedItem(null);
   };
 
-  const updateQuantity = (itemId: string, delta: number) => {
+  const updateQuantity = (cartItemId: string, delta: number) => {
     const newCart = cart.map((c) =>
-      c.item.id === itemId ? { ...c, quantity: c.quantity + delta } : c
+      c.cartItemId === cartItemId ? { ...c, quantity: c.quantity + delta } : c
     ).filter((c) => c.quantity > 0);
     setCart(newCart);
   };
 
-  const removeFromCart = (itemId: string) => {
-    setCart(cart.filter((c) => c.item.id !== itemId));
+  const removeFromCart = (cartItemId: string) => {
+    setCart(cart.filter((c) => c.cartItemId !== cartItemId));
   };
 
-  const cartTotal = cart.reduce((sum, c) => sum + parseFloat(c.item.price) * c.quantity, 0);
+  const handleAddToCartClick = (item: MenuItem) => {
+    setSelectedItem(item);
+  };
+
+  useEffect(() => {
+    if (!selectedItem || groupsLoading) return;
+
+    if (modifierGroups && modifierGroups.length > 0) {
+      setSelectedModifiers({});
+      setSpecialInstructions("");
+      setIsModifierDialogOpen(true);
+    } else {
+      const existingIndex = cart.findIndex(c => c.item.id === selectedItem.id && Object.keys(c.selectedModifiers).length === 0);
+      if (existingIndex > -1) {
+        updateQuantity(cart[existingIndex].cartItemId, 1);
+      } else {
+        const newCartItem: CartItem = {
+          cartItemId: `${selectedItem.id}-${Date.now()}`,
+          item: selectedItem,
+          quantity: 1,
+          selectedModifiers: {},
+          finalPrice: parseFloat(selectedItem.price),
+          specialInstructions: '',
+        };
+        setCart(prev => [...prev, newCartItem]);
+      }
+      toast({ title: `${selectedItem.name} added to cart` });
+      setSelectedItem(null);
+    }
+  }, [selectedItem, modifierGroups, groupsLoading]);
+
+
+  const cartTotal = cart.reduce((sum, c) => sum + c.finalPrice * c.quantity, 0);
   const cartCount = cart.reduce((sum, c) => sum + c.quantity, 0);
 
   // Filter items by selected category (or show all)
@@ -120,6 +172,58 @@ export default function CustomerMenu() {
     sessionStorage.setItem("checkout-cart", JSON.stringify({ restaurantId, cart }));
     navigate(`/checkout/${restaurantId}`);
   };
+
+  const modifierPrice = useMemo(() => {
+    if (!selectedItem) return 0;
+    return Object.values(selectedModifiers).flat().reduce((sum, mod) => sum + parseFloat(mod.priceAdjustment), 0);
+  }, [selectedModifiers, selectedItem]);
+
+  const finalItemPrice = useMemo(() => {
+    if (!selectedItem) return 0;
+    return parseFloat(selectedItem.price) + modifierPrice;
+  }, [selectedItem, modifierPrice]);
+
+  const handleModifierChange = (group: ModifierGroup, modifier: Modifier, checked: boolean) => {
+    setSelectedModifiers(prev => {
+      const newSelections = { ...prev };
+      const currentGroupSelections = newSelections[group.id] || [];
+
+      if (group.selectionType === 'single') {
+        newSelections[group.id] = [modifier];
+      } else { // multiple
+        if (checked) {
+          if (!group.maxSelections || currentGroupSelections.length < group.maxSelections) {
+            newSelections[group.id] = [...currentGroupSelections, modifier];
+          } else {
+            toast({
+              title: `Maximum ${group.maxSelections} selections allowed for ${group.name}.`,
+              variant: "destructive",
+            });
+            // This is a bit of a hack to prevent the UI from showing a checked state when it's not
+            // A better solution would be to control the component fully
+            setTimeout(() => {
+              const checkbox = document.getElementById(`mod-${modifier.id}`) as HTMLInputElement;
+              if (checkbox) checkbox.checked = false;
+            }, 10);
+          }
+        } else {
+          newSelections[group.id] = currentGroupSelections.filter(m => m.id !== modifier.id);
+        }
+      }
+      return newSelections;
+    });
+  };
+
+  const isSelectionValid = useMemo(() => {
+    if (!modifierGroups) return true;
+    for (const group of modifierGroups) {
+      const selections = selectedModifiers[group.id] || [];
+      if (group.isRequired && selections.length === 0) return false;
+      if (group.minSelections && selections.length < group.minSelections) return false;
+    }
+    return true;
+  }, [modifierGroups, selectedModifiers]);
+
 
   // Apply restaurant theme
   useEffect(() => {
@@ -222,13 +326,18 @@ export default function CustomerMenu() {
                     <>
                       <div className="space-y-3 max-h-[400px] overflow-y-auto">
                         {cart.map((cartItem) => (
-                          <Card key={cartItem.item.id}>
+                          <Card key={cartItem.cartItemId}>
                             <CardContent className="p-3">
                               <div className="flex gap-3">
                                 <div className="flex-1">
                                   <h4 className="font-medium text-sm">{cartItem.item.name}</h4>
+                                  {Object.values(cartItem.selectedModifiers).flat().length > 0 && (
+                                    <div className="text-xs text-muted-foreground mt-1">
+                                      {Object.values(cartItem.selectedModifiers).flat().map(m => m.name).join(', ')}
+                                    </div>
+                                  )}
                                   <p className="text-sm text-primary font-semibold mt-1">
-                                    £{(parseFloat(cartItem.item.price) * cartItem.quantity).toFixed(2)}
+                                    £{(cartItem.finalPrice * cartItem.quantity).toFixed(2)}
                                   </p>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -236,8 +345,8 @@ export default function CustomerMenu() {
                                     size="icon"
                                     variant="outline"
                                     className="h-7 w-7"
-                                    onClick={() => updateQuantity(cartItem.item.id, -1)}
-                                    data-testid={`button-decrease-${cartItem.item.id}`}
+                                    onClick={() => updateQuantity(cartItem.cartItemId, -1)}
+                                    data-testid={`button-decrease-${cartItem.cartItemId}`}
                                   >
                                     <Minus className="w-3 h-3" />
                                   </Button>
@@ -246,8 +355,8 @@ export default function CustomerMenu() {
                                     size="icon"
                                     variant="outline"
                                     className="h-7 w-7"
-                                    onClick={() => updateQuantity(cartItem.item.id, 1)}
-                                    data-testid={`button-increase-${cartItem.item.id}`}
+                                    onClick={() => updateQuantity(cartItem.cartItemId, 1)}
+                                    data-testid={`button-increase-${cartItem.cartItemId}`}
                                   >
                                     <Plus className="w-3 h-3" />
                                   </Button>
@@ -255,8 +364,8 @@ export default function CustomerMenu() {
                                     size="icon"
                                     variant="ghost"
                                     className="h-7 w-7"
-                                    onClick={() => removeFromCart(cartItem.item.id)}
-                                    data-testid={`button-remove-${cartItem.item.id}`}
+                                    onClick={() => removeFromCart(cartItem.cartItemId)}
+                                    data-testid={`button-remove-${cartItem.cartItemId}`}
                                   >
                                     <Trash2 className="w-3 h-3" />
                                   </Button>
@@ -374,7 +483,7 @@ export default function CustomerMenu() {
                   <Button
                     size="sm"
                     className="w-full"
-                    onClick={() => addToCart(item)}
+                    onClick={() => handleAddToCartClick(item)}
                     disabled={!item.isAvailable}
                     data-testid={`button-add-to-cart-${item.id}`}
                   >
@@ -387,6 +496,134 @@ export default function CustomerMenu() {
           </div>
         )}
       </div>
+
+      {/* Modifier Selection Dialog */}
+      <Dialog open={isModifierDialogOpen} onOpenChange={(open) => {
+        if (!open) setSelectedItem(null);
+        setIsModifierDialogOpen(open);
+      }}>
+        <DialogContent className="max-w-md">
+          {selectedItem && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{selectedItem.name}</DialogTitle>
+                <DialogDescription>{selectedItem.description}</DialogDescription>
+              </DialogHeader>
+              <div className="max-h-[60vh] overflow-y-auto space-y-4 p-1">
+                {groupsLoading ? (
+                  <div className="flex justify-center items-center h-32">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  </div>
+                ) : (
+                  modifierGroups?.map((group) => (
+                    <ModifierGroupComponent
+                      key={group.id}
+                      group={group}
+                      selectedModifiers={selectedModifiers[group.id] || []}
+                      handleModifierChange={(modifier, checked) => handleModifierChange(group, modifier, checked)}
+                    />
+                  ))
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="special-instructions">Special Instructions</Label>
+                  <Textarea
+                    id="special-instructions"
+                    placeholder="e.g., no onions, extra sauce..."
+                    value={specialInstructions}
+                    onChange={(e) => setSpecialInstructions(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  className="w-full"
+                  size="lg"
+                  disabled={!isSelectionValid}
+                  onClick={() => addToCart(selectedItem, selectedModifiers, specialInstructions, finalItemPrice)}
+                >
+                  Add to Cart for £{finalItemPrice.toFixed(2)}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+const ModifierGroupComponent = ({ group, selectedModifiers, handleModifierChange }: {
+  group: ModifierGroup,
+  selectedModifiers: Modifier[],
+  handleModifierChange: (modifier: Modifier, checked: boolean) => void
+}) => {
+  const { data: modifiers, isLoading } = useQuery<Modifier[]>({
+    queryKey: ['/api/modifiers', group.id],
+  });
+
+  if (isLoading) {
+    return (
+      <div className="py-4">
+        <div className="h-4 bg-muted rounded w-1/2 mb-2" />
+        <div className="h-3 bg-muted rounded w-1/4" />
+      </div>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">{group.name}</CardTitle>
+        <CardDescription>
+          {group.selectionType === 'single' ? 'Select one' : `Select up to ${group.maxSelections || 'any'}`}
+          {group.isRequired && <span className="text-destructive"> *Required</span>}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {group.selectionType === 'single' ? (
+          <RadioGroup
+            value={selectedModifiers[0]?.id}
+            onValueChange={(modifierId) => {
+              const modifier = modifiers?.find(m => m.id === modifierId);
+              if (modifier) handleModifierChange(modifier, true);
+            }}
+          >
+            {modifiers?.map(modifier => (
+              <div key={modifier.id} className="flex items-center justify-between">
+                <Label htmlFor={`mod-${modifier.id}`} className="flex-1 cursor-pointer py-2">
+                  {modifier.name}
+                </Label>
+                <div className="flex items-center gap-2">
+                  {parseFloat(modifier.priceAdjustment) > 0 && (
+                    <span className="text-sm text-muted-foreground">+£{modifier.priceAdjustment}</span>
+                  )}
+                  <RadioGroupItem value={modifier.id} id={`mod-${modifier.id}`} />
+                </div>
+              </div>
+            ))}
+          </RadioGroup>
+        ) : (
+          <div className="space-y-2">
+            {modifiers?.map(modifier => (
+              <div key={modifier.id} className="flex items-center justify-between">
+                <Label htmlFor={`mod-${modifier.id}`} className="flex-1 cursor-pointer py-2">
+                  {modifier.name}
+                </Label>
+                <div className="flex items-center gap-2">
+                  {parseFloat(modifier.priceAdjustment) > 0 && (
+                    <span className="text-sm text-muted-foreground">+£{modifier.priceAdjustment}</span>
+                  )}
+                  <Checkbox
+                    id={`mod-${modifier.id}`}
+                    checked={selectedModifiers.some(m => m.id === modifier.id)}
+                    onCheckedChange={(checked) => handleModifierChange(modifier, !!checked)}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
