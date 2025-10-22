@@ -161,7 +161,31 @@ export const orders = pgTable("orders", {
 });
 
 // Zod schemas for validation
-export const insertRestaurantSchema = createInsertSchema(restaurants).omit({ id: true, createdAt: true });
+const themeConfigSchema = z.object({
+  primaryColor: z.string().optional(),
+  accentColor: z.string().optional(),
+  fontFamily: z.string().optional(),
+  mode: z.enum(["light", "dark"]).optional(),
+});
+
+const orderItemModifierSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  priceAdjustment: z.string(),
+});
+
+const orderItemSchema = z.object({
+  itemId: z.string(),
+  name: z.string(),
+  price: z.string(),
+  quantity: z.number(),
+  modifiers: z.array(orderItemModifierSchema),
+  specialInstructions: z.string().optional(),
+});
+
+export const insertRestaurantSchema = createInsertSchema(restaurants, {
+  themeConfig: themeConfigSchema,
+}).omit({ id: true, createdAt: true });
 export const insertCategorySchema = createInsertSchema(categories).omit({ id: true });
 export const insertMenuItemSchema = createInsertSchema(menuItems).omit({ id: true });
 export const insertModifierGroupSchema = createInsertSchema(modifierGroups).omit({ id: true });
@@ -170,7 +194,9 @@ export const insertLocationSchema = createInsertSchema(locations).omit({ id: tru
 export const insertLocationMenuOverrideSchema = createInsertSchema(locationMenuOverrides).omit({ id: true });
 export const insertCustomerSchema = createInsertSchema(customers).omit({ id: true, createdAt: true });
 export const insertCustomerFavoriteSchema = createInsertSchema(customerFavorites).omit({ id: true, createdAt: true });
-export const insertOrderSchema = createInsertSchema(orders).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertOrderSchema = createInsertSchema(orders, {
+  items: z.array(orderItemSchema),
+}).omit({ id: true, createdAt: true, updatedAt: true });
 
 // TypeScript types
 export type Restaurant = typeof restaurants.$inferSelect;
